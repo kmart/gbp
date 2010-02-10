@@ -1,0 +1,424 @@
+/* errors.h */
+
+#define ERR_BASE			 0x1000
+
+#define NO_ERR  			 0					/*Everything is OK*/
+#define ERR_COMNUM           ERR_BASE      		/*Wrong Com number or Serial Port is Absent*/
+#define ERR_INITPORT         ERR_BASE+1    		/*One of the argument (BaudRate,start bit,...) is wrong*/
+#define ERR_LRC              ERR_BASE+2    		/*Wrong LRC*/
+#define ERR_READER_MUTE      ERR_BASE+3    		/*Reader is mute*/
+#define ERR_SEQUENCE_NUMBER  ERR_BASE+4    		/*The Sequence Number received is incorrect*/
+#define ERR_RESYNCH          ERR_BASE+5    		/*The API had to send Resynch Command to the Reader.*/
+#define ERR_WRITEPORT        ERR_BASE+6    		/*An error occured during Send operation*/
+#define ERR_READPORT         ERR_BASE+7    		/*An error occured during Write operation*/
+#define ERR_SERIOUS_ERROR    ERR_BASE+8    		/*A serious error occured. Resynch was unsucessfull */
+#define ERR_NACK             ERR_BASE+9    		/*The Reader has sent NACK Value. Only in TLP Protocol.*/
+#define ERR_PARITY           ERR_BASE+10    	/*Parity Error found.*/
+
+
+/* PP.h */
+
+#define FALSE	0
+#define TRUE  	1
+
+unsigned short PP_Open(    /* Initialize the card reader port. */
+    int baud,     		   /* Baud rate to set port to  */
+    int bits,     		   /* unsigned charsize: 5, 6, 7 or 8  */
+    char par,     		   /* Parity: 'E' even, 'O' odd, 'N' none */
+    char port 			   /* Port, Number */
+);
+
+unsigned long PP_SetTimeOut(
+    unsigned long blocktime
+);
+
+unsigned short PP_Receive(
+    unsigned short int *readsize,     /*Number of unsigned chars read*/
+    unsigned char *response,     	  /* unsigned chars read*/
+    short int ( * pCallBack ) ( unsigned char pBuffer, unsigned short int SizeBuffer )
+);
+
+unsigned short PP_Send(
+    unsigned short int writesize,
+    unsigned char* c          /* unsigned chars to be written */
+);
+
+unsigned short PP_Close(      /* On a Mac, gotta close the port */
+    void
+);
+
+
+/* VP.h */
+
+#define GBP_SIZE			 259				/*GBP MAX -> 255 Data + NAD + PCB +LEN +LRC*/
+#define DUMMY_TIMEOUT  		 2000 				/*Dummy Default Communication Timeout.Only used to avoid incorrect value if User call */
+
+/* VP_GetTimeOut before any VP_SetTimeOut */
+
+/***************************************************************/
+/* Description : Send data to the reader                       */
+/*                                                             */
+/* Input :                                                     */
+/*        unsigned short int Len  -> Command Length            */
+/*        unsigned char *Byte     -> The reader command        */
+/*                                                             */
+/* Output :                                                    */
+/* Returns :                                                   */
+/*          Err_WritePort                                      */
+/*          No_Err                                             */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int VP_Send( unsigned short int usiLen,
+                   unsigned char *prgucByte ) ;
+
+/***************************************************************/
+/* Description : Get the data returned by the reader           */
+/*                                                             */
+/* Input :                                                     */
+/*        (pfct) -> Call back function address                 */
+/* Output :                                                    */
+/*        unsigned short int *Len -> Response Length           */
+/*        unsigned char *Resp     -> The reader response       */
+/*                                                             */
+/* Returns :                                                   */
+/*                    No_Err                                   */
+/*                    Err_ReadPort                             */
+/*                    Err_TimeOut                              */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int VP_Receive( unsigned short int *usiLen,
+                      unsigned char *Resp,
+                      short int ( *pFct ) ( unsigned char, unsigned short int ) ) ;
+
+/***************************************************************/
+/* Description : Open a communication file with reader         */
+/*                                                             */
+/* Input :                                                     */
+/*        char NCom -> Communication number (1 to 4)           */
+/*        char Bits -> Number of Data bits in a word           */
+/*        char Parity -> Parity used in serial comm            */
+/*        unsigned long VCom -> Communication speed (9600 to   */
+/*                              38400).                        */
+/*                                                             */
+/* Output                                                      */
+/* Returns :                                                   */
+/*          No_Err -> Everything is ok                         */
+/*          Err_ComNum                                         */
+/*          Err_InitPort                                       */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int VP_Open( char cCom_Nb,
+                   char cBits,
+                   char cParity,
+                   unsigned long uliBaudRate ) ;
+
+/***************************************************************/
+/* Description :  Close communication file previously open     */
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output :                                                    */
+/*     No_Err (Only there is no test in the close operation)   */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+void VP_Close( void ) ;
+
+/***************************************************************/
+/* Description : Sets a new Time Out Value.                    */
+/*                                                             */
+/* Input : Delay in ms                                         */
+/*                                                             */
+/* Output                                                      */
+/*                                                             */
+/* Global Variables :                                          */
+/*                   TimeOut variable is modified              */
+/*                                                             */
+/***************************************************************/
+void VP_SetTimeOut( unsigned long uliTime ) ;
+
+/***************************************************************/
+/* Description : Returns current Time Out Value used in        */
+/*               communication between Host and Reader.        */
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output : Time Out in ms                                     */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned long VP_GetTimeOut( void ) ;
+
+/* TL.h */
+
+#define MAXTRY					3				/*Number of retry in GBP Protocol if some errors occur*/
+#define EOT    				 0x03    			/*The end of a transmission in TLP 224 Protocol*/
+#define DEFAULT_PCB_VALUE 	 0x00  	 			/*Default PCB Value in GBP Protocol*/
+#define DEFAULT_NAD_VALUE 	 0x42  				/*Default Host to Reader NAD Value in GBP Protocol*/
+#define RESYNCH 			 0xC0    			/*Resynch Value*/
+#define TL_VERSION 			 "TL_VERSION-V1.0" 	/*Library Version*/
+#define DEFAULT_TIMEOUT  	 2000 				/*Default Communication Timeout Value between Library and GBP device*/
+
+/*The following values are used in the callback function TL_EndOfReceipt*/
+#define NOT_FOUND 0
+#define FOUND    1
+
+/***************************************************************/
+/* Description : Returns Library Version                       */
+/*                                                             */
+/* Input : None                                                */
+/*                                                             */
+/* Output : String Buffer with the format TL_VERSION-Vx.y      */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+char* Get_TL_Version( void ) ;
+
+/***************************************************************/
+/* Description : Returns current PCB Value used in GBP Protocol*/
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output : PCB Value (0x00 or 0x40)                           */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned char TL_GBP_GetSeqNumber( void ) ;
+
+/***************************************************************/
+/* Description : Set the new value for PCB                     */
+/*                                                             */
+/* Input :      New Value for PCB  (0x00 or 0x40)              */
+/*                                                             */
+/* Output                                                      */
+/*                                                             */
+/* Global Variables :                                          */
+/*               PCB is modified                               */
+/*                                                             */
+/* Warning : The PCB Value is not test by the function. If you */
+/* Uses wrong PCB Value, reader won't reply                    */
+/***************************************************************/
+void TL_GBP_SetSeqNumber( unsigned char ucPCB ) ;
+
+/***************************************************************/
+/* Description :   Returns current NAD using by GBP Protocol   */
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output : NAD Value used by library. Default value is 42h    */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned char TL_GBP_GetNAD( void ) ;
+
+/***************************************************************/
+/* Description : Sets the new NAD value to use in GBP Protocol */
+/*                                                             */
+/* Input : New NAD value.                                      */
+/*                                                             */
+/* Output                                                      */
+/*                                                             */
+/* Global Variables :                                          */
+/*                   NAD variable is modified                  */
+/*                                                             */
+/* Warning :                                                   */
+/*          Like PCB value, if wrong NAD value is used reader  */
+/*          won't reply.                                       */
+/***************************************************************/
+void TL_GBP_SetNAD( unsigned char ucNewNAD ) ;
+
+/***************************************************************/
+/* Description : Returns current Time Out Value used in        */
+/*               communication between Host and Reader.        */
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output : Time Out in ms                                     */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned long TL_GetTimeOut( void ) ;
+
+/***************************************************************/
+/* Description : Sets a new Time Out Value used in the next    */
+/*               communication between Host and Reader.        */
+/*                                                             */
+/* Input : Delay in ms                                         */
+/*                                                             */
+/* Output                                                      */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+void TL_SetTimeOut( unsigned long uliTOut ) ;
+
+/***************************************************************/
+/* Description : Sends the reader command and retrieves        */
+/*               the reader response, both using GBP           */
+/*                                                             */
+/* Input  :                                                    */
+/*         unsigned char ucLnCmd  -> Length of the command     */
+/*         unsigned char *prgucCmd  -> Buffer with the command */
+/*                                                             */
+/* Output :                                                    */
+/*         unsigned char *ucLnResp -> Length of the response   */
+/*         unsigned char *prgucResp   -> Buffer with response  */
+/* Returns :                                                   */
+/*          No_Err -> Everything is ok                         */
+/*          Err_LRC                                            */
+/*          Err_SeqNumber                                      */
+/*          Err_NACK                                           */
+/*          Err_ReaderMute                                     */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int TL_SendReceive( unsigned char ucLnCmd,
+                          unsigned char *prgucCmd,
+                          unsigned char *pucLnResp ,
+                          unsigned char *prgucResp ) ;
+
+/***************************************************************/
+/* Description : Open a communication file with reader         */
+/*                                                             */
+/* Input :                                                     */
+/*        unsigned char NCom -> Communication number (1 to 4)  */
+/*        unsigned long VCom -> Communication speed (9600 to   */
+/*                              38400).                        */
+/*                                                             */
+/* Output                                                      */
+/* Returns :                                                   */
+/*          No_Err -> Everything is ok                         */
+/*          Err_ComNum                                         */
+/*          Err_InitPort                                       */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int TL_Open( unsigned char ucNCom,
+                   unsigned long uliVCom ) ;
+
+/***************************************************************/
+/* Description :  Close communication file previously open     */
+/*                                                             */
+/* Input :                                                     */
+/*                                                             */
+/* Output :                                                    */
+/*     No_Err (Only there is no test in the close operation)   */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int TL_Close( void ) ;
+
+/***************************************************************/
+/* Description : Sends the GBP Resynch command                 */
+/*                                                             */
+/* Input  :                                                    */
+/*                                                             */
+/* Output :                                                    */
+/*                                                             */
+/* Returns :                                                   */
+/*          No_Err -> Everything is ok                         */
+/*          Err_LRC                                            */
+/*          Err_SeqNumber                                      */
+/*          Err_NACK                                           */
+/*          Err_ReaderMute                                     */
+/*                                                             */
+/* Global Variables :                                          */
+/*          PCB Variable is modified                           */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int TL_Reset( void ) ;
+
+/***************************************************************/
+/* Description : Returns LRC value computed with Data values   */
+/*                                                             */
+/* Input :                                                     */
+/*         unsigned char *prgucData -> Data                    */
+/*         unsigned short int usiLen   -> Data Length          */
+/*                                                             */
+/* Output :                                                    */
+/*          LRC Value                                          */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned char VTB_ComputeLRC( unsigned char*prgucData,
+                              unsigned short int usiLen ) ;
+
+/***************************************************************/
+/* Description : Compare two LRC value                         */
+/*                                                             */
+/* Input : Two LRC values                                      */
+/*                                                             */
+/* Output :                                                    */
+/*         No_Err  -> The values are equal                     */
+/*         Err_LRC                                             */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+short int VTB_TestLRCs( unsigned char ucVal1,
+                        unsigned char ucVal2 ) ;
+
+/***************************************************************/
+/* Description : Extract LRC Value from a buffer               */
+/*                                                             */
+/* Input :                                                     */
+/*       unsigned char *prgucData -> Buffer where the LRC value*/
+/*                                must be extracted.           */
+/*       unsigned short int usiLen   -> Data Length            */
+/*                                                             */
+/* Output :                                                    */
+/*          LRC Value                                          */
+/*                                                             */
+/* Global Variables :                                          */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+unsigned char VTB_GetLRC( unsigned char *prgucData ,
+                          unsigned short int usiLen ) ;
