@@ -1,1 +1,30 @@
-ruby extconf.rb --with-gbp-dir=/usr/local
+A thin Ruby interface layer to the Gemplus Block Protocol (GBP) library
+(http://www.gemalto.com/techno/gbp_libraries/).
+
+The GBP library provides a serial connection to the Gemalto (previously
+Gemplus) Prox-PU and Prox-P2 readers.
+
+Installation:
+
+1. Fetch and unpack the GBP library kit itself (link above).
+
+2. Apply the patch 'gbplib.patch' to the GBP library source, compile
+   and install the library.
+
+3. Build and install the Ruby interface:
+
+     $ ruby extconf.rb --with-gbp-dir=/usr/local
+     $ make
+     $ make install
+
+API:
+
+    p = Chipcard::GBP::Reader("/dev/ttyS0")
+
+    res = p.send( [ 0x22, 0x05, 0x3F, 0xF0, 0x10 ] )
+    puts res
+
+The commands that can be sent are described in the GILK Programmer's Guide
+(link above).
+
+See the 'LICENSE' file for licensing information.
