@@ -1,0 +1,207 @@
+diff -w -x .svn -urN gbplib.orig/Makefile gbplib/Makefile
+--- gbplib.orig/Makefile	2001-10-17 12:45:04.000000000 +0200
++++ gbplib/Makefile	2006-09-26 09:47:22.000000000 +0200
+@@ -1,7 +1,7 @@
+ 
+ 
+ CC = gcc
+-CFLAGS = -Wall -ansi
++CFLAGS = -Wall -ansi #-fPIC
+ OBJ	= TL.o VP.o PP.o
+ 
+ 
+@@ -19,7 +19,9 @@
+ gbp : $(OBJ)
+ 	$(CC)  -shared  $(OBJ) -o libGBP.so
+ #Copy Library in usr/lib directory.
+-	cp libGBP.so /usr/lib
++	cp libGBP.so /usr/local/lib
++	mkdir -p /usr/local/include/gbp
++	cp *.h /usr/local/include/gbp
+ 
+ 
+ 	
+diff -w -x .svn -urN gbplib.orig/PP.c gbplib/PP.c
+--- gbplib.orig/PP.c	2001-11-26 11:59:40.000000000 +0100
++++ gbplib/PP.c	2006-09-26 09:47:22.000000000 +0200
+@@ -41,37 +41,17 @@
+ }
+ ioport;
+ 
+-unsigned short PP_Open( int baud, int bits, char parity, char port )
++
++static unsigned short PP_Open_Serial( int baud, int bits, char parity, char *tty )
+ {
+ 
+     unsigned long handle;
+     struct termios newtio;
+     /*  fd_set rfds;*/
+     /*  struct timeval tv;*/
+-    char DevTTY[ 20 ] ;
+-
+-
+-    switch ( port )
+-    {
+-    case 1:
+-        strcpy( DevTTY, "/dev/ttyS0" ) ;
+-        break;
+-    case 2:
+-        strcpy( DevTTY, "/dev/ttyS1" ) ;
+-        break;
+-    case 3:
+-        strcpy( DevTTY, "/dev/ttyS2" ) ;
+-        break;
+-    case 4:
+-        strcpy( DevTTY, "/dev/ttyS3" ) ;
+-        break;
+-    default :
+-        return ( FALSE );
+-    }
+-
+ 
+     /* Try user input depending on port */
+-    if ( ( handle = open( DevTTY, O_RDWR | O_NOCTTY ) ) < 0 )
++    if ( ( handle = open( tty, O_RDWR | O_NOCTTY ) ) < 0 )
+     {
+         return FALSE;
+     }
+@@ -208,6 +188,40 @@
+     return TRUE;
+ }
+ 
++unsigned short PP_Open( int baud, int bits, char parity, char port )
++{
++    char DevTTY[ 20 ] ;
++
++    switch ( port )
++    {
++    case 1:
++        strcpy( DevTTY, "/dev/ttyS0" ) ;
++        break;
++    case 2:
++        strcpy( DevTTY, "/dev/ttyS1" ) ;
++        break;
++    case 3:
++        strcpy( DevTTY, "/dev/ttyS2" ) ;
++        break;
++    case 4:
++        strcpy( DevTTY, "/dev/ttyS3" ) ;
++        break;
++    default :
++        return ( FALSE );
++    }
++
++    return PP_Open_Serial( baud, bits, parity, DevTTY );
++}
++
++unsigned short PP_Open_TTY( int baud, int bits, char parity, char *port )
++{
++    if ( strnlen(port, 20) > 0 && strnlen(port, 20) < 20 )
++        return PP_Open_Serial( baud, bits, parity, port );
++
++    return ( FALSE );
++}
++
++
+ unsigned short PP_Receive( unsigned short int *readsize, unsigned char *response, short int ( *pCallBack ) ( unsigned char pBuffer, unsigned short int SizeBuffer ) )
+ {
+     unsigned char cByte,
+diff -w -x .svn -urN gbplib.orig/PP.h gbplib/PP.h
+--- gbplib.orig/PP.h	2001-11-26 11:59:58.000000000 +0100
++++ gbplib/PP.h	2006-09-26 09:47:22.000000000 +0200
+@@ -34,6 +34,21 @@
+     char port /* Port, Number */
+ );
+ 
++unsigned short PP_Open(    /* Initialize the card reader port. */
++    int baud,     /* Baud rate to set port to  */
++    int bits,     /* unsigned charsize: 5, 6, 7 or 8  */
++    char par,     /* Parity: 'E' even, 'O' odd, 'N' none */
++    char port /* Port, Number */
++);
++
++
++unsigned short PP_Open_TTY(    /* Initialize the card reader port. */
++    int baud,     /* Baud rate to set port to  */
++    int bits,     /* unsigned charsize: 5, 6, 7 or 8  */
++    char par,     /* Parity: 'E' even, 'O' odd, 'N' none */
++    char *port    /* Port, device */
++);
++
+ 
+ unsigned long PP_SetTimeOut(
+     unsigned long blocktime
+diff -w -x .svn -urN gbplib.orig/TL.c gbplib/TL.c
+--- gbplib.orig/TL.c	2001-11-26 11:59:40.000000000 +0100
++++ gbplib/TL.c	2006-09-26 09:47:22.000000000 +0200
+@@ -690,6 +690,20 @@
+     return ( siErr ) ;
+ }
+ 
++short int TL_Open_TTY( char *sTTY
++                   , unsigned long uliVCom )
++{
++    short int siErr = NO_ERR ;
++
++    /*Init Default TimeOut value*/
++    VP_SetTimeOut( DEFAULT_TIMEOUT ) ;
++
++    /*Initialize Serial Port*/
++    siErr = VP_Open_TTY ( sTTY, 8, 'N', uliVCom ) ;
++
++    return ( siErr ) ;
++}
++
+ /***************************************************************/
+ /* Description :  Close communication file previously open     */
+ /*                                                             */
+diff -w -x .svn -urN gbplib.orig/TL.h gbplib/TL.h
+--- gbplib.orig/TL.h	2001-11-26 11:59:58.000000000 +0100
++++ gbplib/TL.h	2006-09-26 09:47:22.000000000 +0200
+@@ -184,6 +184,9 @@
+ short int TL_Open( unsigned char ucNCom,
+                    unsigned long uliVCom ) ;
+ 
++short int TL_Open_TTY( char *sTTY,
++                       unsigned long uliVCom ) ;
++
+ /***************************************************************/
+ /* Description :  Close communication file previously open     */
+ /*                                                             */
+diff -w -x .svn -urN gbplib.orig/VP.c gbplib/VP.c
+--- gbplib.orig/VP.c	2001-11-26 11:59:40.000000000 +0100
++++ gbplib/VP.c	2006-09-26 09:47:22.000000000 +0200
+@@ -134,6 +134,18 @@
+     return ( NO_ERR ) ;
+ }
+ 
++short int VP_Open_TTY( char *sTTY,
++                       char cBits,
++                       char cParity,
++                       unsigned long uliBaudRate )
++{
++    /*Add your own function to initialize Serial Port*/
++    if ( PP_Open_TTY( uliBaudRate, cBits, cParity, sTTY ) == FALSE )
++        return ( ERR_INITPORT ) ;
++
++    return ( NO_ERR ) ;
++}
++
+ /***************************************************************/
+ /* Description :  Close communication file previously open     */
+ /*                                                             */
+diff -w -x .svn -urN gbplib.orig/VP.h gbplib/VP.h
+--- gbplib.orig/VP.h	2001-11-26 11:59:58.000000000 +0100
++++ gbplib/VP.h	2006-09-26 09:47:22.000000000 +0200
+@@ -101,6 +101,11 @@
+                    char cParity,
+                    unsigned long uliBaudRate ) ;
+ 
++short int VP_Open_TTY( char *sTTY,
++                       char cBits,
++                       char cParity,
++                       unsigned long uliBaudRate ) ;
++
+ /***************************************************************/
+ /* Description :  Close communication file previously open     */
+ /*                                                             */
